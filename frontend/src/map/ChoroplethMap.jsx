@@ -66,10 +66,10 @@ export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
         priceRange.min,
         priceRange.max
       ),
-      weight: isSelected ? 4 : 1.3,
-      opacity: 1,
-      color: isSelected ? '#2563eb' : '#1f2937',
-      fillOpacity: isSelected ? 0.88 : 0.68,
+      weight: isSelected ? 3.5 : 1,
+      opacity: isSelected ? 1 : 0.85,
+      color: isSelected ? '#2563eb' : '#374151',
+      fillOpacity: isSelected ? 0.72 : 0.45,
     }
   }
 
