@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
 import { api } from '../services/api'
 import { priceToColor, getPriceRange, formatPrice, formatNumber } from './colorScale'
@@ -15,9 +15,36 @@ function MapResizer() {
   return null
 }
 
+function SelectedCommuneZoom({ selectedCode, layerRefs }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!selectedCode) return
+
+    const zoomToLayer = () => {
+      const layer = layerRefs.current[selectedCode]
+
+      if (!layer) return
+
+      map.flyToBounds(layer.getBounds(), {
+        padding: [40, 40],
+        maxZoom: 13,
+        duration: 0.8,
+      })
+    }
+
+    // Small delay because GeoJSON layers may need a moment after render
+    setTimeout(zoomToLayer, 100)
+  }, [selectedCode, map, layerRefs])
+
+  return null
+}
+
 export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
   const [geojson, setGeojson] = useState(null)
   const [error, setError] = useState(null)
+  const layerRefs = useRef({})
+
   const priceRange = getPriceRange(geojson)
 
   useEffect(() => {
@@ -35,19 +62,21 @@ export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
 
     return {
       fillColor: priceToColor(
-  properties.avg_price_per_sqm,
-  priceRange.min,
-  priceRange.max
-),
-      weight: isSelected ? 4 : 1,
+        properties.avg_price_per_sqm,
+        priceRange.min,
+        priceRange.max
+      ),
+      weight: isSelected ? 4 : 1.3,
       opacity: 1,
-      color: isSelected ? '#2563eb' : '#374151',
-      fillOpacity: isSelected ? 0.9 : 0.72,
+      color: isSelected ? '#2563eb' : '#1f2937',
+      fillOpacity: isSelected ? 0.88 : 0.68,
     }
   }
 
   const onEachFeature = (feature, layer) => {
     const p = feature.properties
+
+    layerRefs.current[p.insee_code] = layer
 
     layer.bindTooltip(
       `
@@ -63,7 +92,7 @@ export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
         event.target.setStyle({
           weight: 3,
           color: '#111827',
-          fillOpacity: 0.9,
+          fillOpacity: 0.85,
         })
       },
       mouseout: (event) => {
@@ -100,6 +129,7 @@ export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
       style={{ height: '100%', width: '100%' }}
     >
       <MapResizer />
+      <SelectedCommuneZoom selectedCode={selectedCode} layerRefs={layerRefs} />
 
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
