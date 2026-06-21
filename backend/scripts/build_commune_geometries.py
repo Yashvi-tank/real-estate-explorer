@@ -97,7 +97,24 @@ WHERE geom IS NOT NULL
 """
 
 
+RESTORE_NAMES_QUERY = """
+UPDATE communes c
+SET name = names.commune_name
+FROM (
+    SELECT
+        commune_insee_code,
+        MAX(raw_data->>'commune_name') AS commune_name
+    FROM transactions
+    GROUP BY commune_insee_code
+) names
+WHERE c.insee_code = names.commune_insee_code
+"""
+
+
 async def build_commune_geometries():
+    if not DB_URL:
+        raise RuntimeError("DATABASE_URL is missing. Check backend/.env")
+
     conn = await asyncpg.connect(DB_URL)
 
     print("Clearing communes table...")
@@ -127,6 +144,9 @@ async def build_commune_geometries():
 
             except Exception as fallback_error:
                 print(f"❌ Failed commune {code}: {fallback_error}")
+
+    print("Restoring commune names from DVF transactions...")
+    await conn.execute(RESTORE_NAMES_QUERY)
 
     total = await conn.fetchval("SELECT COUNT(*) FROM communes")
     print(f"✅ Built {total} commune geometries")

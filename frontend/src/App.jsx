@@ -3,6 +3,7 @@ import ChoroplethMap from './map/ChoroplethMap'
 import DetailPanel from './components/DetailPanel'
 import RankingsPanel from './components/RankingsPanel'
 import ComparePanel from './components/ComparePanel'
+import SearchBar from './components/SearchBar'
 
 const MODES = ['Explore', 'Rankings', 'Compare']
 
@@ -46,6 +47,14 @@ export default function App() {
           <h1 className="text-lg font-bold">Val-de-Marne</h1>
           <p className="text-xs text-gray-400">Real Estate Market Explorer</p>
         </div>
+        <div className="p-3 border-b border-gray-700">
+  <SearchBar
+    onSelectCommune={(code) => {
+      setSelectedCode(code)
+      setMode('Explore')
+    }}
+  />
+</div>
 
         <div className="grid grid-cols-3 border-b border-gray-700">
           {MODES.map((item) => (
