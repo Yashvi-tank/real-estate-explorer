@@ -19,6 +19,8 @@ services:
       CORS_ORIGINS: http://localhost:5173
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/app/data
     depends_on:
       - db
 

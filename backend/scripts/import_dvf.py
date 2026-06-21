@@ -20,17 +20,32 @@ USE_COLUMNS = [
     "Date mutation",
     "Nature mutation",
     "Valeur fonciere",
+    "No voie",
+    "B/T/Q",
+    "Type de voie",
+    "Code voie",
+    "Voie",
+    "Code postal",
     "Code departement",
     "Code commune",
     "Commune",
+    "Section",
+    "No plan",
+    "1er lot",
+    "Surface Carrez du 1er lot",
+    "2eme lot",
+    "Surface Carrez du 2eme lot",
+    "Nombre de lots",
     "Type local",
     "Surface reelle bati",
+    "Nombre pieces principales",
 ]
 
 
 def clean_number(value):
     if pd.isna(value):
         return None
+
     try:
         return float(str(value).replace(",", "."))
     except Exception:
@@ -38,6 +53,13 @@ def clean_number(value):
 
 
 def make_transaction_id(row):
+    """
+    DVF is line-based, not transaction-based.
+
+    One real sale can appear on several rows.
+    We build a stable transaction key using fields that identify the sale itself,
+    not every parcel/lot line.
+    """
     raw_key = "|".join([
         str(row.get("Date mutation", "")),
         str(row.get("No disposition", "")),
@@ -46,6 +68,44 @@ def make_transaction_id(row):
         str(row.get("Code commune", "")),
         str(row.get("Commune", "")),
     ])
+
+    return hashlib.sha1(raw_key.encode("utf-8")).hexdigest()
+
+
+def make_raw_line_key(row):
+    """
+    Exact duplicate protection.
+
+    Some DVF files can contain repeated identical lines.
+    We hash the full useful raw line so exact duplicates are skipped before
+    aggregation. This prevents duplicated rows from inflating surface values.
+    """
+    raw_key = "|".join([
+        str(row.get("No disposition", "")),
+        str(row.get("Date mutation", "")),
+        str(row.get("Nature mutation", "")),
+        str(row.get("Valeur fonciere", "")),
+        str(row.get("No voie", "")),
+        str(row.get("B/T/Q", "")),
+        str(row.get("Type de voie", "")),
+        str(row.get("Code voie", "")),
+        str(row.get("Voie", "")),
+        str(row.get("Code postal", "")),
+        str(row.get("Code departement", "")),
+        str(row.get("Code commune", "")),
+        str(row.get("Commune", "")),
+        str(row.get("Section", "")),
+        str(row.get("No plan", "")),
+        str(row.get("1er lot", "")),
+        str(row.get("Surface Carrez du 1er lot", "")),
+        str(row.get("2eme lot", "")),
+        str(row.get("Surface Carrez du 2eme lot", "")),
+        str(row.get("Nombre de lots", "")),
+        str(row.get("Type local", "")),
+        str(row.get("Surface reelle bati", "")),
+        str(row.get("Nombre pieces principales", "")),
+    ])
+
     return hashlib.sha1(raw_key.encode("utf-8")).hexdigest()
 
 
@@ -58,7 +118,14 @@ async def import_dvf(filepath: str):
 
     transactions = {}
 
+    # Global set across chunks, so duplicates are removed even if they appear later.
+    seen_raw_lines = set()
+    duplicate_raw_lines = 0
+
     chunk_number = 0
+    total_department_94_rows = 0
+    total_sale_rows = 0
+    total_house_apartment_rows = 0
 
     for chunk in pd.read_csv(
         filepath,
@@ -74,15 +141,21 @@ async def import_dvf(filepath: str):
 
         # Keep only department 94 = Val-de-Marne
         chunk = chunk[chunk["Code departement"] == "94"].copy()
+        total_department_94_rows += len(chunk)
 
         if chunk.empty:
             continue
 
         # Keep only real sales
         chunk = chunk[chunk["Nature mutation"] == "Vente"].copy()
+        total_sale_rows += len(chunk)
+
+        if chunk.empty:
+            continue
 
         # Keep only houses and apartments
         chunk = chunk[chunk["Type local"].isin(["Appartement", "Maison"])].copy()
+        total_house_apartment_rows += len(chunk)
 
         if chunk.empty:
             continue
@@ -95,6 +168,14 @@ async def import_dvf(filepath: str):
         chunk = chunk[chunk["surface"] > 5]
 
         for _, row in chunk.iterrows():
+            raw_line_key = make_raw_line_key(row)
+
+            if raw_line_key in seen_raw_lines:
+                duplicate_raw_lines += 1
+                continue
+
+            seen_raw_lines.add(raw_line_key)
+
             commune_code = str(row["Code commune"]).zfill(3)
             commune_insee_code = f"94{commune_code}"
 
@@ -109,11 +190,18 @@ async def import_dvf(filepath: str):
                     "commune_insee_code": commune_insee_code,
                     "commune_name": row["Commune"],
                     "type_local": row["Type local"],
+                    "raw_line_count": 0,
                 }
 
-            # Same transaction can appear on multiple rows/lots, so sum surfaces
+            # Same transaction can appear on multiple valid parcel/lot rows,
+            # so we sum surface only after exact duplicate rows are removed.
             transactions[tx_id]["surface"] += float(row["surface"])
+            transactions[tx_id]["raw_line_count"] += 1
 
+    print(f"Department 94 rows: {total_department_94_rows}")
+    print(f"Sale rows in department 94: {total_sale_rows}")
+    print(f"House/apartment rows in department 94: {total_house_apartment_rows}")
+    print(f"Skipped exact duplicate raw DVF rows: {duplicate_raw_lines}")
     print(f"Grouped transactions before filtering: {len(transactions)}")
 
     clean_rows = []
@@ -139,6 +227,7 @@ async def import_dvf(filepath: str):
             json.dumps({
                 "commune_name": tx["commune_name"],
                 "type_local": tx["type_local"],
+                "raw_line_count": tx["raw_line_count"],
             }, ensure_ascii=False),
         ))
 
