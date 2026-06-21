@@ -20,12 +20,28 @@ export default function ComparePanel({ leftCode, rightCode, onClear }) {
   }, [leftCode, rightCode])
 
   if (!leftCode && !rightCode) {
-    return (
-      <div className="p-4 text-sm text-gray-400">
-        Select two communes to compare them. You can click a commune and use “Add to compare”.
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold text-white">Compare communes</h2>
+
+      <div className="bg-gray-700/70 rounded-lg p-4 text-sm text-gray-300 space-y-2">
+        <p>
+          Select any commune on the map or from the rankings, then click
+          <span className="font-semibold text-white"> Add to compare</span>.
+        </p>
+
+        <p>
+          Choose a second commune to compare average price, median price,
+          surface, transaction count, and affordability.
+        </p>
       </div>
-    )
-  }
+
+      <div className="text-xs text-gray-500">
+        Example: compare Vincennes with Saint-Maur-des-Fossés.
+      </div>
+    </div>
+  )
+}
 
   if (leftCode && !rightCode) {
     return (
