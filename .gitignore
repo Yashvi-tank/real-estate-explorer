@@ -14,3 +14,5 @@ data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 prod_minimal.sql
+
+.vscode/
