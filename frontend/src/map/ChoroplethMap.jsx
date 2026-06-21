@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
 import { api } from '../services/api'
-import { priceToColor, formatPrice, formatNumber } from './colorScale'
+import { priceToColor, getPriceRange, formatPrice, formatNumber } from './colorScale'
 
 function MapResizer() {
   const map = useMap()
@@ -18,6 +18,7 @@ function MapResizer() {
 export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
   const [geojson, setGeojson] = useState(null)
   const [error, setError] = useState(null)
+  const priceRange = getPriceRange(geojson)
 
   useEffect(() => {
     api.getGeoJSON()
@@ -33,7 +34,11 @@ export default function ChoroplethMap({ selectedCode, onCommuneClick }) {
     const isSelected = selectedCode === properties.insee_code
 
     return {
-      fillColor: priceToColor(properties.avg_price_per_sqm),
+      fillColor: priceToColor(
+  properties.avg_price_per_sqm,
+  priceRange.min,
+  priceRange.max
+),
       weight: isSelected ? 4 : 1,
       opacity: 1,
       color: isSelected ? '#2563eb' : '#374151',
