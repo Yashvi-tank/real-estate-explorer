@@ -42,11 +42,11 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen bg-gray-950 text-white flex overflow-hidden">
-      <aside className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
-          <h1 className="text-lg font-bold">Val-de-Marne</h1>
-          <p className="text-xs text-gray-400">Real Estate Market Explorer</p>
-        </div>
+      <aside className="w-80 bg-gray-900 border-r border-white/[0.07] flex flex-col">
+  <div className="px-4 pt-4 pb-3 border-b border-white/[0.07]">
+    <p className="text-xs text-gray-500 uppercase tracking-widest mb-0.5">Val-de-Marne</p>
+    <h1 className="text-base font-bold text-gray-100">Real Estate Explorer</h1>
+  </div>
         <div className="p-3 border-b border-gray-700">
   <SearchBar
     onSelectCommune={(code) => {

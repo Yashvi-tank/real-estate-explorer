@@ -1,0 +1,20 @@
+﻿project-includes = ["backend/app"]
+
+project-excludes = [
+  "backend/.venv",
+  "frontend/node_modules",
+  "**/__pycache__"
+]
+
+search-path = ["backend"]
+
+site-package-path = [
+  "backend/.venv/Lib/site-packages"
+]
+
+python-platform = "windows"
+python-version = "3.12"
+python-interpreter-path = "backend/.venv/Scripts/python.exe"
+
+[errors]
+missing-import = false
